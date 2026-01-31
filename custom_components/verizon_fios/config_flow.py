@@ -32,7 +32,7 @@ class VerizonFiOSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input[CONF_USERNAME],
                 user_input[CONF_PASSWORD],
             )
-            
+
             try:
                 _LOGGER.debug(
                     "Testing connection to %s with username %s",
@@ -43,7 +43,7 @@ class VerizonFiOSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     # Create the entry
                     await self.async_set_unique_id(user_input[CONF_ROUTER_URL])
                     self._abort_if_unique_id_configured()
-                    
+
                     _LOGGER.info("Successfully connected to router")
                     return self.async_create_entry(
                         title="Verizon FiOS Router",
