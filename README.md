@@ -126,7 +126,7 @@ logger:
 
 ## Changelog
 
-### v1.0.9 (2025-01-31) - Current Release
+### v1.1.0 (2026-05-28) - Current Release
 - 🚀 Eliminated redundant sensor data reprocessing — coordinator caches processed data, cutting ~200+ passes per update cycle down to one
 - ✅ Fixed JavaScript parser string-tracking bug — mismatched quotes (e.g. apostrophes in device names) no longer break bracket matching
 - ✅ Replaced quote-conversion regex with a proper character-by-character converter — handles apostrophes, escaped quotes, and embedded double quotes correctly
