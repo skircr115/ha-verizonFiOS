@@ -24,7 +24,13 @@ class VerizonRouterCoordinator(DataUpdateCoordinator):
             entry.data[CONF_USERNAME],
             entry.data[CONF_PASSWORD],
         )
-        
+
+        # Cache for processed sensor definitions. Populated lazily by the first
+        # sensor that reads native_value after an update, then shared by all
+        # sensors for the remainder of that cycle. Invalidated here each time
+        # fresh raw data arrives so that the next read triggers reprocessing.
+        self.processed_data: dict[str, dict] | None = None
+
         super().__init__(
             hass,
             _LOGGER,
@@ -35,6 +41,9 @@ class VerizonRouterCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API."""
         try:
-            return await self.api.fetch_router_data()
+            data = await self.api.fetch_router_data()
+            # Invalidate processed cache — sensors will repopulate on next access
+            self.processed_data = None
+            return data
         except Exception as err:
             raise UpdateFailed(f"Error communicating with router: {err}") from err

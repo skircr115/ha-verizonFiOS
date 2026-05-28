@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Verizon FiOS Router Setup",
+        "description": "Enter your router credentials. The default username is 'admin'.",
+        "data": {
+          "router_url": "Router URL",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to router. Check URL and credentials.",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This router is already configured"
+    }
+  }
+}
