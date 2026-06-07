@@ -18,5 +18,22 @@
     "abort": {
       "already_configured": "This router is already configured"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update Router Connection",
+        "description": "Current router: {router_url}",
+        "data": {
+          "router_url": "Router URL",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to router. Check URL and credentials.",
+      "unknown": "Unexpected error occurred"
+    }
   }
 }

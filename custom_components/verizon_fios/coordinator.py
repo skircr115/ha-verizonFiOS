@@ -19,10 +19,15 @@ class VerizonRouterCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
+        # Options (if set) take precedence over the original config data so
+        # that URL / credential changes made via the options flow take effect
+        # immediately on the next reload.
+        effective = {**entry.data, **entry.options}
+
         self.api = VerizonRouterAPI(
-            entry.data[CONF_ROUTER_URL],
-            entry.data[CONF_USERNAME],
-            entry.data[CONF_PASSWORD],
+            effective[CONF_ROUTER_URL],
+            effective[CONF_USERNAME],
+            effective[CONF_PASSWORD],
         )
 
         # Cache for processed sensor definitions. Populated lazily by the first
