@@ -39,6 +39,19 @@ A comprehensive Home Assistant integration for Verizon FiOS CR1000A and CE1000A 
    - **Password**: Your router admin password
 5. Click **Submit**
 
+### Updating Credentials or Router IP After Installation
+
+If your router's IP address changes (e.g. after a network reconfiguration) or you update your admin password, you can reconfigure the integration without removing and re-adding it:
+
+1. Go to **Settings** → **Devices & Services**
+2. Find **Verizon FiOS Router** and click **Configure**
+3. Update the Router URL, username, and/or password
+4. Click **Submit** — the integration validates the new connection before saving
+
+If the connection test passes, the integration reloads automatically with the new settings. No Home Assistant restart is required. If the test fails, the form stays open with an error so you can correct the details before saving.
+
+> **Note on extenders:** Extender discovery is automatic — the integration finds CE1000A units from the router's topology data. Updating the router URL is all that's needed; there is no separate extender URL to configure.
+
 ### Supported Routers
 
 - ✅ Verizon CR1000A (tested)
@@ -107,6 +120,10 @@ The integration fetches data from:
 - Check password is correct
 - Ensure Home Assistant can reach the router
 
+### Router IP Changed
+
+If your router's IP address changed and the integration is showing unavailable sensors, use **Configure** (see [Updating Credentials or Router IP After Installation](#updating-credentials-or-router-ip-after-installation)) to update the URL without losing your history or automations.
+
 ### Missing Sensors
 
 - Some sensors only appear when devices are connected
@@ -126,7 +143,14 @@ logger:
 
 ## Changelog
 
-### v1.1.0 (2026-05-28) - Current Release
+### v1.2.0 (2026-06-07) - Current Release
+- ✨ Added Options Flow — router URL, username, and password can now be updated post-install via **Configure** without removing and re-adding the integration
+- ✅ Integration reloads automatically when options are saved; no Home Assistant restart required
+- ✅ Connection is validated before new options are committed — bad credentials or an unreachable URL are caught at save time, not at the next update cycle
+- ✅ Updated `strings.json` and `translations/en.json` with options flow labels and error messages
+- ℹ️ No breaking changes — all entity IDs, sensor names, and existing configuration entries remain the same
+
+### v1.1.0 (2026-05-28)
 - 🚀 Eliminated redundant sensor data reprocessing — coordinator caches processed data, cutting ~200+ passes per update cycle down to one
 - ✅ Fixed JavaScript parser string-tracking bug — mismatched quotes (e.g. apostrophes in device names) no longer break bracket matching
 - ✅ Replaced quote-conversion regex with a proper character-by-character converter — handles apostrophes, escaped quotes, and embedded double quotes correctly
