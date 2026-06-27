@@ -63,34 +63,35 @@ class VerizonRouterAPI:
 
         # Regex to match double-quoted strings or single-quoted strings
         string_regex = re.compile(
-            r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\''
+            r'("[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\')'
         )
         inner_regex = re.compile(r"\\.|\"")
 
-        def repl(match: re.Match) -> str:
-            s = match.group(0)
-            if s.startswith('"'):
-                return s
+        # split() will place matched strings at odd indices in the returned list.
+        parts = string_regex.split(value_str)
 
-            # Strip the outer single quotes
-            inner = s[1:-1]
+        for i in range(1, len(parts), 2):
+            s = parts[i]
+            if s.startswith("'"):
+                # Strip the outer single quotes
+                inner = s[1:-1]
 
-            # Fast path: if there are no backslashes and no double quotes, just wrap
-            if "\\" not in inner and '"' not in inner:
-                return '"' + inner + '"'
+                # Fast path: no backslashes and no double quotes
+                if "\\" not in inner and '"' not in inner:
+                    parts[i] = '"' + inner + '"'
+                else:
 
-            def inner_repl(im: re.Match) -> str:
-                text = im.group(0)
-                if text == "\\'":
-                    return "'"
-                if text == '"':
-                    return '\\"'
-                return text
+                    def inner_repl(im: re.Match) -> str:
+                        text = im.group(0)
+                        if text == "\\'":
+                            return "'"
+                        if text == '"':
+                            return '\\"'
+                        return text
 
-            inner = inner_regex.sub(inner_repl, inner)
-            return '"' + inner + '"'
+                    parts[i] = '"' + inner_regex.sub(inner_repl, inner) + '"'
 
-        return string_regex.sub(repl, value_str)
+        return "".join(parts)
 
     def _parse_js_value(self, js_content: str, variable_name: str) -> Any:
         """Parse JavaScript variable values from router response."""
