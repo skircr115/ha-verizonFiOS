@@ -72,8 +72,8 @@ class VerizonRouterAPI:
         The router returns data as JavaScript with single-quoted strings.
         A simple regex replacement (e.g. s/'([^']*)'/"\\1"/) breaks on
         apostrophes inside double-quoted strings and on escaped quotes inside
-        single-quoted strings.  This method uses regular expressions to find
-        and replace strings accurately:
+        single-quoted strings.  This method walks the string character by
+        character, tracking context so that:
 
         - Double-quoted strings pass through completely unchanged (preserving
           any apostrophes they contain).
