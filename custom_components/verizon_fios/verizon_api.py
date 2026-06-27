@@ -52,79 +52,45 @@ class VerizonRouterAPI:
         The router returns data as JavaScript with single-quoted strings.
         A simple regex replacement (e.g. s/'([^']*)'/"\\1"/) breaks on
         apostrophes inside double-quoted strings and on escaped quotes inside
-        single-quoted strings.  This method walks the string character by
-        character, tracking context so that:
+        single-quoted strings.  This method converts strings by:
 
-        - Double-quoted strings pass through completely unchanged (preserving
-          any apostrophes they contain).
-        - Single-quoted strings are converted to double-quoted, with:
+        - Letting double-quoted strings pass through completely unchanged
+          (preserving any apostrophes they contain).
+        - Converting single-quoted strings to double-quoted, with:
             - \\' (escaped single quote) → bare '
             - bare " inside the string → \\"
         """
-        result = []
-        i = 0
-        length = len(value_str)
 
-        while i < length:
-            char = value_str[i]
+        # Regex to match double-quoted strings or single-quoted strings
+        string_regex = re.compile(
+            r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\''
+        )
+        inner_regex = re.compile(r"\\.|\"")
 
-            # --- double-quoted string: pass through unchanged ---
-            if char == '"':
-                result.append(char)
-                i += 1
-                while i < length:
-                    c = value_str[i]
-                    result.append(c)
-                    if c == "\\" and i + 1 < length:
-                        # Escaped char — consume both bytes without interpreting
-                        i += 1
-                        result.append(value_str[i])
-                    elif c == '"':
-                        # Closing double quote
-                        i += 1
-                        break
-                    i += 1
-                continue
+        def repl(match: re.Match) -> str:
+            s = match.group(0)
+            if s.startswith('"'):
+                return s
 
-            # --- single-quoted string: convert to double-quoted ---
-            if char == "'":
-                result.append('"')  # Opening single quote → double quote
-                i += 1
-                while i < length:
-                    c = value_str[i]
-                    if c == "\\" and i + 1 < length:
-                        next_c = value_str[i + 1]
-                        if next_c == "'":
-                            # \' inside single-quoted string is just a literal '
-                            # No need to escape ' inside double quotes
-                            result.append("'")
-                            i += 2
-                        else:
-                            # All other escape sequences pass through as-is
-                            result.append(c)
-                            result.append(next_c)
-                            i += 2
-                        continue
-                    if c == '"':
-                        # Bare double quote inside a single-quoted string must
-                        # be escaped so the output is valid JSON
-                        result.append('\\"')
-                        i += 1
-                        continue
-                    if c == "'":
-                        # Closing single quote → double quote
-                        result.append('"')
-                        i += 1
-                        break
-                    result.append(c)
-                    i += 1
-                continue
+            # Strip the outer single quotes
+            inner = s[1:-1]
 
-            # --- anything else: pass through ---
-            result.append(char)
-            i += 1
+            # Fast path: if there are no backslashes and no double quotes, just wrap
+            if "\\" not in inner and '"' not in inner:
+                return '"' + inner + '"'
 
-        return "".join(result)
+            def inner_repl(im: re.Match) -> str:
+                text = im.group(0)
+                if text == "\\'":
+                    return "'"
+                if text == '"':
+                    return '\\"'
+                return text
+
+            inner = inner_regex.sub(inner_repl, inner)
+            return '"' + inner + '"'
+
+        return string_regex.sub(repl, value_str)
 
     def _parse_js_value(self, js_content: str, variable_name: str) -> Any:
         """Parse JavaScript variable values from router response."""
@@ -245,7 +211,9 @@ class VerizonRouterAPI:
                 "Origin": self.router_url,
                 "Referer": f"{self.router_url}/",
                 "Content-Type": "application/x-www-form-urlencoded",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " "AppleWebKit/537.36"
+                ),
             }
 
             async with session.post(
