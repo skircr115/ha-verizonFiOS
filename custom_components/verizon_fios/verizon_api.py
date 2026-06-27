@@ -11,6 +11,26 @@ import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
+_JS_STRING_PATTERN = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', flags=re.DOTALL)
+_INNER_STRING_PATTERN = re.compile(r'\\.|"', flags=re.DOTALL)
+
+
+def _inner_repl(match: re.Match) -> str:
+    g = match.group(0)
+    if g == "\\'":
+        return "'"
+    if g == '"':
+        return '\\"'
+    return g
+
+
+def _replacer(match: re.Match) -> str:
+    s = match.group(0)
+    if s.startswith('"'):
+        return s
+    new_inner = _INNER_STRING_PATTERN.sub(_inner_repl, s[1:-1])
+    return '"' + new_inner + '"'
+
 
 class VerizonRouterAPI:
     """Handle Verizon Router API communication."""
@@ -51,8 +71,8 @@ class VerizonRouterAPI:
         The router returns data as JavaScript with single-quoted strings.
         A simple regex replacement (e.g. s/'([^']*)'/"\\1"/) breaks on
         apostrophes inside double-quoted strings and on escaped quotes inside
-        single-quoted strings.  This method walks the string character by
-        character, tracking context so that:
+        single-quoted strings.  This method uses regular expressions to find
+        and replace strings accurately:
 
         - Double-quoted strings pass through completely unchanged (preserving
           any apostrophes they contain).
@@ -60,70 +80,7 @@ class VerizonRouterAPI:
             - \\' (escaped single quote) → bare '
             - bare " inside the string → \\"
         """
-        result = []
-        i = 0
-        length = len(value_str)
-
-        while i < length:
-            char = value_str[i]
-
-            # --- double-quoted string: pass through unchanged ---
-            if char == '"':
-                result.append(char)
-                i += 1
-                while i < length:
-                    c = value_str[i]
-                    result.append(c)
-                    if c == '\\' and i + 1 < length:
-                        # Escaped char — consume both bytes without interpreting
-                        i += 1
-                        result.append(value_str[i])
-                    elif c == '"':
-                        # Closing double quote
-                        i += 1
-                        break
-                    i += 1
-                continue
-
-            # --- single-quoted string: convert to double-quoted ---
-            if char == "'":
-                result.append('"')  # Opening single quote → double quote
-                i += 1
-                while i < length:
-                    c = value_str[i]
-                    if c == '\\' and i + 1 < length:
-                        next_c = value_str[i + 1]
-                        if next_c == "'":
-                            # \' inside single-quoted string is just a literal '
-                            # No need to escape ' inside double quotes
-                            result.append("'")
-                            i += 2
-                        else:
-                            # All other escape sequences pass through as-is
-                            result.append(c)
-                            result.append(next_c)
-                            i += 2
-                        continue
-                    if c == '"':
-                        # Bare double quote inside a single-quoted string must
-                        # be escaped so the output is valid JSON
-                        result.append('\\"')
-                        i += 1
-                        continue
-                    if c == "'":
-                        # Closing single quote → double quote
-                        result.append('"')
-                        i += 1
-                        break
-                    result.append(c)
-                    i += 1
-                continue
-
-            # --- anything else: pass through ---
-            result.append(char)
-            i += 1
-
-        return ''.join(result)
+        return _JS_STRING_PATTERN.sub(_replacer, value_str)
 
     def _parse_js_value(self, js_content: str, variable_name: str) -> Any:
         """Parse JavaScript variable values from router response."""
