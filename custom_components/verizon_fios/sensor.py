@@ -1,6 +1,7 @@
 """Sensor platform for Verizon FiOS Router."""
 import logging
 import re
+import string
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
@@ -787,15 +788,20 @@ def _create_band_sensors(sensors: dict, bands: dict, prefix: str, device_key: st
     }
 
 
+_SANITIZE_TRANS_DICT = {i: None for i in range(256)}
+for _c in string.ascii_lowercase + string.digits + "_":
+    _SANITIZE_TRANS_DICT[ord(_c)] = _c
+for _c in " /-":
+    _SANITIZE_TRANS_DICT[ord(_c)] = "_"
+_SANITIZE_TRANS_DICT[ord("&")] = "and"
+
+_SANITIZE_RE = re.compile(r"[^a-z0-9_]")
+
+
 def _sanitize_name(name: str) -> str:
     """Sanitize name for entity ID."""
-    safe = name.lower()
-    safe = safe.replace(' ', '_').replace(',', '').replace('.', '')
-    safe = safe.replace('/', '_').replace('(', '').replace(')', '')
-    safe = safe.replace('-', '_').replace("'", '').replace('"', '')
-    safe = safe.replace('&', 'and')
-    safe = re.sub(r'[^a-z0-9_]', '', safe)
-    return safe
+    safe = name.lower().translate(_SANITIZE_TRANS_DICT)
+    return _SANITIZE_RE.sub("", safe)
 
 
 class VerizonRouterSensor(CoordinatorEntity, SensorEntity):
