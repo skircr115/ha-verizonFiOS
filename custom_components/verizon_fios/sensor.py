@@ -29,7 +29,7 @@ async def async_setup_entry(
     # Process the data and create sensors
     if coordinator.data:
         processed_data = await hass.async_add_executor_job(
-            _process_router_data, coordinator.data, entry
+            _process_router_data, coordinator.data
         )
         # Seed the coordinator cache so the initial native_value reads on every
         # sensor don't each trigger an independent reprocessing pass.
@@ -66,7 +66,7 @@ def _get_device_info(
     )
 
 
-def _process_router_data(data: dict[str, Any], entry: ConfigEntry) -> dict[str, dict]:
+def _process_router_data(data: dict[str, Any]) -> dict[str, dict]:
     """Process router data into sensor definitions."""
     sensors = {}
 
@@ -850,7 +850,7 @@ class VerizonRouterSensor(CoordinatorEntity, SensorEntity):
         """
         if self.coordinator.processed_data is None and self.coordinator.data:
             self.coordinator.processed_data = _process_router_data(
-                self.coordinator.data, self._entry
+                self.coordinator.data
             )
         return self.coordinator.processed_data or {}
 
@@ -874,31 +874,31 @@ class VerizonRouterSensor(CoordinatorEntity, SensorEntity):
                     else None
                 ),
             )
-        else:
-            # Extender device
-            if topology and "nodes" in topology:
-                extender_index = int(self._device_key.split("_")[1])
-                if len(topology["nodes"]) > extender_index:
-                    node = topology["nodes"][extender_index]
-                    return DeviceInfo(
-                        identifiers={
-                            (DOMAIN, f"{self._entry.entry_id}_{self._device_key}")
-                        },
-                        name=node.get("device_name", f"Extender {extender_index}"),
-                        manufacturer="Verizon",
-                        model=node.get("model_name", "CE1000A"),
-                        sw_version=node.get("sw_ver"),
-                        via_device=(DOMAIN, self._entry.entry_id),
-                    )
 
-            # Fallback
-            return DeviceInfo(
-                identifiers={(DOMAIN, f"{self._entry.entry_id}_{self._device_key}")},
-                name=f"Extender {self._device_key.split('_')[1]}",
-                manufacturer="Verizon",
-                model="CE1000A",
-                via_device=(DOMAIN, self._entry.entry_id),
-            )
+        # Extender device
+        if topology and "nodes" in topology:
+            extender_index = int(self._device_key.split("_")[1])
+            if len(topology["nodes"]) > extender_index:
+                node = topology["nodes"][extender_index]
+                return DeviceInfo(
+                    identifiers={
+                        (DOMAIN, f"{self._entry.entry_id}_{self._device_key}")
+                    },
+                    name=node.get("device_name", f"Extender {extender_index}"),
+                    manufacturer="Verizon",
+                    model=node.get("model_name", "CE1000A"),
+                    sw_version=node.get("sw_ver"),
+                    via_device=(DOMAIN, self._entry.entry_id),
+                )
+
+        # Fallback
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{self._entry.entry_id}_{self._device_key}")},
+            name=f"Extender {self._device_key.split('_')[1]}",
+            manufacturer="Verizon",
+            model="CE1000A",
+            via_device=(DOMAIN, self._entry.entry_id),
+        )
 
     @property
     def native_value(self):

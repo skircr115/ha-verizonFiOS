@@ -1,4 +1,5 @@
 """DataUpdateCoordinator for Verizon Router."""
+
 from datetime import timedelta
 import logging
 from typing import Any

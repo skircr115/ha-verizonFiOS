@@ -1,4 +1,5 @@
 """Verizon FiOS Router Integration."""
+
 import logging
 
 from homeassistant.config_entries import ConfigEntry
