@@ -5,10 +5,10 @@ import hashlib
 import json
 import logging
 import re
-import ssl
 from typing import Any
 
 import aiohttp
+import homeassistant.util.ssl as ha_ssl
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,12 +22,8 @@ class VerizonRouterAPI:
         self.username = username
         self.password = password
         # Single SSL context created via the public API and reused for every
-        # connection.  ssl._create_unverified_context() is a private helper
-        # that may disappear; the two lines below are the documented way to
-        # achieve the same result.
-        self._ssl_context = ssl.create_default_context()
-        self._ssl_context.check_hostname = False
-        self._ssl_context.verify_mode = ssl.CERT_NONE
+        # connection. Use Home Assistant's helper to prevent blocking event loop.
+        self._ssl_context = ha_ssl.get_default_no_verify_context()
 
     def _arc_md5(self, text: str) -> str:
         """Verizon's custom ArcMD5 hash: MD5 -> SHA512."""
