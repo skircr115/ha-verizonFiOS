@@ -1,4 +1,5 @@
 """Verizon Router API handler."""
+
 import asyncio
 import hashlib
 import json
@@ -51,14 +52,14 @@ class VerizonRouterAPI:
     def _arc_md5(self, text: str) -> str:
         """Verizon's custom ArcMD5 hash: MD5 -> SHA512."""
         md5_hash = hashlib.md5(text.encode()).hexdigest()
-        sha512_hash = hashlib.sha512(md5_hash.encode('ascii')).hexdigest()
+        sha512_hash = hashlib.sha512(md5_hash.encode("ascii")).hexdigest()
         return sha512_hash
 
     def _login_encode(self, password: str, token: str) -> str:
         """Encode password with token: SHA512(token + ArcMD5(password))."""
         arc_md5_result = self._arc_md5(password)
         combined = token + arc_md5_result
-        final_hash = hashlib.sha512(combined.encode('ascii')).hexdigest()
+        final_hash = hashlib.sha512(combined.encode("ascii")).hexdigest()
         return final_hash
 
     def _hash_username(self, username: str) -> str:
@@ -98,18 +99,18 @@ class VerizonRouterAPI:
             # we are inside a string and, if so, which quote character opened
             # it.  This prevents mismatched quotes (e.g. an apostrophe inside
             # a double-quoted string) from confusing the bracket counter.
-            if value_str.startswith('{') or value_str.startswith('['):
+            if value_str.startswith("{") or value_str.startswith("["):
                 bracket_count = 0
                 brace_count = 0
                 end_pos = 0
-                string_char = None   # None = not in string; '"' or "'" = in string
+                string_char = None  # None = not in string; '"' or "'" = in string
                 escape_next = False
 
                 for i, char in enumerate(value_str):
                     if escape_next:
                         escape_next = False
                         continue
-                    if char == '\\':
+                    if char == "\\":
                         escape_next = True
                         continue
                     if string_char is not None:
@@ -122,13 +123,13 @@ class VerizonRouterAPI:
                         string_char = char
                         continue
 
-                    if char == '{':
+                    if char == "{":
                         brace_count += 1
-                    elif char == '}':
+                    elif char == "}":
                         brace_count -= 1
-                    elif char == '[':
+                    elif char == "[":
                         bracket_count += 1
-                    elif char == ']':
+                    elif char == "]":
                         bracket_count -= 1
 
                     if brace_count == 0 and bracket_count == 0:
@@ -141,10 +142,10 @@ class VerizonRouterAPI:
             # Convert JS single-quoted strings to JSON double-quoted strings
             value_str = self._convert_js_to_json(value_str)
             # Remove trailing commas before closing brackets (invalid in JSON)
-            value_str = re.sub(r',(\s*[}\]])', r'\1', value_str)
+            value_str = re.sub(r",(\s*[}\]])", r"\1", value_str)
 
             return json.loads(value_str)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             _LOGGER.debug("Error parsing %s: %s", variable_name, e)
             return None
 
@@ -153,7 +154,7 @@ class VerizonRouterAPI:
         try:
             async with session.get(
                 f"{self.router_url}/loginStatus.cgi",
-                timeout=aiohttp.ClientTimeout(total=10)
+                timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
                 _LOGGER.debug("Token request status: %s", response.status)
                 if response.status == 200:
@@ -166,17 +167,18 @@ class VerizonRouterAPI:
                         _LOGGER.error("Failed to parse token response as JSON: %s", e)
                         return None
 
-                    token = data.get('loginToken')
+                    token = data.get("loginToken")
                     if token:
                         _LOGGER.debug("Successfully retrieved login token")
-                    else:
-                        _LOGGER.error("No loginToken in response: %s", data)
-                    return token
-                else:
-                    _LOGGER.error("Bad status getting token: %s", response.status)
+                        return token
+
+                    _LOGGER.error("No loginToken in response: %s", data)
+                    return None
+
+                _LOGGER.error("Bad status getting token: %s", response.status)
         except asyncio.TimeoutError:
             _LOGGER.error("Timeout getting login token")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             _LOGGER.error("Error getting login token: %s", e)
         return None
 
@@ -193,14 +195,14 @@ class VerizonRouterAPI:
                 "luci_password": password_hash,
                 "luci_view": "Desktop",
                 "luci_token": token,
-                "luci_keep_login": "0"
+                "luci_keep_login": "0",
             }
 
             headers = {
                 "Origin": self.router_url,
                 "Referer": f"{self.router_url}/",
                 "Content-Type": "application/x-www-form-urlencoded",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             }
 
             async with session.post(
@@ -208,16 +210,16 @@ class VerizonRouterAPI:
                 data=login_data,
                 headers=headers,
                 allow_redirects=False,
-                timeout=aiohttp.ClientTimeout(total=10)
+                timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
                 _LOGGER.debug("Login response status: %s", response.status)
 
                 if response.status == 302:
                     # Try Set-Cookie header first
-                    if 'Set-Cookie' in response.headers:
-                        set_cookie = response.headers.get('Set-Cookie', '')
-                        if 'sysauth=' in set_cookie:
-                            match = re.search(r'sysauth=([^;]+)', set_cookie)
+                    if "Set-Cookie" in response.headers:
+                        set_cookie = response.headers.get("Set-Cookie", "")
+                        if "sysauth=" in set_cookie:
+                            match = re.search(r"sysauth=([^;]+)", set_cookie)
                             if match and match.group(1):
                                 _LOGGER.info("Login successful")
                                 return True
@@ -225,17 +227,19 @@ class VerizonRouterAPI:
                     # Fallback: check cookie jar
                     cookies = session.cookie_jar.filter_cookies(self.router_url)
                     for cookie in cookies.values():
-                        if cookie.key == 'sysauth' and cookie.value:
+                        if cookie.key == "sysauth" and cookie.value:
                             _LOGGER.info("Login successful")
                             return True
 
                     _LOGGER.error("Login failed - no sysauth cookie found")
                 else:
-                    _LOGGER.error("Login failed - unexpected status: %s", response.status)
+                    _LOGGER.error(
+                        "Login failed - unexpected status: %s", response.status
+                    )
 
         except asyncio.TimeoutError:
             _LOGGER.error("Login timeout")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             _LOGGER.error("Login error: %s", e)
         return False
 
@@ -251,9 +255,7 @@ class VerizonRouterAPI:
 
         try:
             async with aiohttp.ClientSession(
-                connector=connector,
-                cookie_jar=cookie_jar,
-                timeout=timeout
+                connector=connector, cookie_jar=cookie_jar, timeout=timeout
             ) as session:
                 token = await self._get_login_token(session)
                 if not token:
@@ -271,7 +273,7 @@ class VerizonRouterAPI:
         except asyncio.TimeoutError:
             _LOGGER.error("Connection timeout")
             return False
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             _LOGGER.error("Connection test failed: %s", e)
             return False
         finally:
@@ -287,17 +289,19 @@ class VerizonRouterAPI:
 
         try:
             async with aiohttp.ClientSession(
-                connector=connector,
-                cookie_jar=cookie_jar,
-                timeout=timeout
+                connector=connector, cookie_jar=cookie_jar, timeout=timeout
             ) as session:
                 # Login
                 token = await self._get_login_token(session)
                 if not token:
-                    raise Exception("Could not get login token")
+                    raise Exception(
+                        "Could not get login token"
+                    )  # pylint: disable=broad-exception-raised
 
                 if not await self._login(session, token):
-                    raise Exception("Login failed")
+                    raise Exception(
+                        "Login failed"
+                    )  # pylint: disable=broad-exception-raised
 
                 # Fetch data files
                 headers = {"Referer": f"{self.router_url}/"}
@@ -306,10 +310,12 @@ class VerizonRouterAPI:
                 async with session.get(
                     f"{self.router_url}/cgi/cgi_basic.js",
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=30)
+                    timeout=aiohttp.ClientTimeout(total=30),
                 ) as response:
                     if response.status != 200:
-                        raise Exception(f"Failed to fetch cgi_basic.js: {response.status}")
+                        raise Exception(  # pylint: disable=broad-exception-raised
+                            f"Failed to fetch cgi_basic.js: {response.status}"
+                        )
                     basic_content = await response.text()
 
                 # Get cgi_owl.js (optional — not all routers expose this endpoint)
@@ -318,11 +324,11 @@ class VerizonRouterAPI:
                     async with session.get(
                         f"{self.router_url}/cgi/cgi_owl.js",
                         headers=headers,
-                        timeout=aiohttp.ClientTimeout(total=30)
+                        timeout=aiohttp.ClientTimeout(total=30),
                     ) as response:
                         if response.status == 200:
                             owl_content = await response.text()
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     _LOGGER.debug("Could not fetch cgi_owl.js: %s", e)
 
                 return await self._parse_data(basic_content, owl_content)
@@ -331,37 +337,41 @@ class VerizonRouterAPI:
             if not connector.closed:
                 await connector.close()
 
-    async def _parse_data(self, basic_content: str, owl_content: str | None) -> dict[str, Any]:
+    async def _parse_data(
+        self, basic_content: str, owl_content: str | None
+    ) -> dict[str, Any]:
         """Parse router data into structured format."""
         data = {}
 
         # Parse topology
         topology = self._parse_js_value(basic_content, "dump_toplogy_map_info")
-        if topology and 'nodes' in topology:
-            data['topology'] = topology
+        if topology and "nodes" in topology:
+            data["topology"] = topology
 
         # Parse known devices
         known_devices = self._parse_js_value(basic_content, "known_device_list")
         if not known_devices and owl_content:
             known_devices = self._parse_js_value(owl_content, "known_device_list")
         if known_devices:
-            data['known_devices'] = known_devices
+            data["known_devices"] = known_devices
 
         # Parse station info
         station_info = self._parse_js_value(basic_content, "dump_toplogy_station_info")
         if not station_info and owl_content:
-            station_info = self._parse_js_value(owl_content, "dump_toplogy_station_info")
+            station_info = self._parse_js_value(
+                owl_content, "dump_toplogy_station_info"
+            )
         if station_info:
-            data['station_info'] = station_info
+            data["station_info"] = station_info
 
         # Parse router name
         router_name = self._parse_js_value(basic_content, "router_name")
         if router_name:
-            data['router_name'] = router_name
+            data["router_name"] = router_name
 
         # Parse hardware model
         hardware_model = self._parse_js_value(basic_content, "hardware_model")
         if hardware_model:
-            data['hardware_model'] = hardware_model
+            data["hardware_model"] = hardware_model
 
         return data

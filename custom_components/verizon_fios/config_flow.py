@@ -1,4 +1,5 @@
 """Config flow for Verizon FiOS Router integration."""
+
 import logging
 from typing import Any
 
@@ -56,11 +57,13 @@ class VerizonFiOSConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         title="Verizon FiOS Router",
                         data=user_input,
                     )
-                else:
-                    _LOGGER.warning("Connection test failed - check credentials")
-                    errors["base"] = "cannot_connect"
-            except Exception as err:
-                _LOGGER.exception("Unexpected exception during connection test: %s", err)
+
+                _LOGGER.warning("Connection test failed - check credentials")
+                errors["base"] = "cannot_connect"
+            except Exception as err:  # pylint: disable=broad-except
+                _LOGGER.exception(
+                    "Unexpected exception during connection test: %s", err
+                )
                 errors["base"] = "unknown"
 
         # Show the form
