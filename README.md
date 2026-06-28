@@ -143,7 +143,11 @@ logger:
 
 ## Changelog
 
-### v1.2.0 (2026-06-07) - Current Release
+### v1.2.1 (2026-06-28) - Current Release
+- ✅ Fixed asyncio blocking call when creating SSL context
+- ℹ️ No breaking changes
+
+### v1.2.0 (2026-06-07)
 - ✨ Added Options Flow — router URL, username, and password can now be updated post-install via **Configure** without removing and re-adding the integration
 - ✅ Integration reloads automatically when options are saved; no Home Assistant restart required
 - ✅ Connection is validated before new options are committed — bad credentials or an unreachable URL are caught at save time, not at the next update cycle
