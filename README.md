@@ -145,6 +145,9 @@ logger:
 
 ### v1.2.1 (2026-06-28) - Current Release
 - ✅ Fixed asyncio blocking call when creating SSL context
+- 🚀 Performance optimization: Convert JS parsing to use regex
+- ⚡ Optimize `_sanitize_name` using translation mapping and pre-compiled regex
+- 🧹 Refactor: Remove unused `_sanitize_name` function in `sensor.py`
 - ℹ️ No breaking changes
 
 ### v1.2.0 (2026-06-07)
