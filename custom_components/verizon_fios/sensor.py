@@ -525,17 +525,20 @@ def _process_station_info(sensors: dict, stations: list, nodes: list) -> None:
     extender_bands = {}
     for i, node in enumerate(nodes[1:], 1):
         extender_mac = node.get("device_mac", "")
-        extender_bands[extender_mac] = {
-            "2g": 0,
-            "2g_guest": 0,
-            "2g_iot": 0,
-            "5g": 0,
-            "5g_iptv": 0,
-            "5g_backhaul": 0,
-            "6g": 0,
-            "6g_backhaul": 0,
-            "ethernet": 0,
-        }
+        extender_bands[extender_mac] = (
+            f"extender_{i}",
+            {
+                "2g": 0,
+                "2g_guest": 0,
+                "2g_iot": 0,
+                "5g": 0,
+                "5g_iptv": 0,
+                "5g_backhaul": 0,
+                "6g": 0,
+                "6g_backhaul": 0,
+                "ethernet": 0,
+            },
+        )
 
     # Quality metrics per band
     band_metrics = {
@@ -554,7 +557,7 @@ def _process_station_info(sensors: dict, stations: list, nodes: list) -> None:
         if parent_mac == main_router_mac:
             target = router_bands
         elif parent_mac in extender_bands:
-            target = extender_bands[parent_mac]
+            target = extender_bands[parent_mac][1]
         else:
             continue
 
@@ -630,12 +633,8 @@ def _process_station_info(sensors: dict, stations: list, nodes: list) -> None:
     _create_band_sensors(sensors, router_bands, "router", "router")
 
     # Create extender band sensors
-    for i, node in enumerate(nodes[1:], 1):
-        extender_mac = node.get("device_mac", "")
-        if extender_mac in extender_bands:
-            _create_band_sensors(
-                sensors, extender_bands[extender_mac], f"extender_{i}", f"extender_{i}"
-            )
+    for ext_id, bands in extender_bands.values():
+        _create_band_sensors(sensors, bands, ext_id, ext_id)
 
     # Create quality metric sensors - all under router device
     for band_name, metrics in band_metrics.items():
