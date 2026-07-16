@@ -124,14 +124,14 @@ class VerizonRouterAPI:
 
     def _parse_js_value(self, js_content: str, variable_name: str) -> Any:
         """Parse JavaScript variable values from router response."""
-        rod_pattern = rf'addROD\("{variable_name}",\s*(.+?)\s*\);'
-        match = re.search(rod_pattern, js_content, re.DOTALL)
+        pattern = rf'(?:addROD\([\'"]{variable_name}[\'"],\s*|(?:var\s+|let\s+|const\s+)?{variable_name}\s*=\s*)(.*)'
+        match = re.search(pattern, js_content, re.DOTALL)
 
         if not match:
             return None
 
         try:
-            value_str = match.group(1).strip()
+            value_str = match.group(1).lstrip()
 
             # For complex objects/arrays, find the matching closing bracket
             # by walking character-by-character.  string_char tracks whether
@@ -177,6 +177,28 @@ class VerizonRouterAPI:
 
                 if end_pos > 0:
                     value_str = value_str[:end_pos]
+
+            elif value_str.startswith('"') or value_str.startswith("'"):
+                quote_char = value_str[0]
+                escape_next = False
+                end_pos = 0
+                for i in range(1, len(value_str)):
+                    char = value_str[i]
+                    if escape_next:
+                        escape_next = False
+                        continue
+                    if char == "\\":
+                        escape_next = True
+                        continue
+                    if char == quote_char:
+                        end_pos = i + 1
+                        break
+                if end_pos > 0:
+                    value_str = value_str[:end_pos]
+            else:
+                end_match = re.search(r'[\s,;)]', value_str)
+                if end_match:
+                    value_str = value_str[:end_match.start()]
 
             # Convert JS single-quoted strings to JSON double-quoted strings
             value_str = self._convert_js_to_json(value_str)
