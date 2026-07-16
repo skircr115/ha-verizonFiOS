@@ -404,8 +404,10 @@ class VerizonRouterAPI:
         """Parse router data into structured format."""
         data = {}
 
-        # Parse topology
+        # Parse topology (handle potential typo fix in newer firmware: toplogy -> topology)
         topology = self._parse_js_value(basic_content, "dump_toplogy_map_info")
+        if not topology:
+            topology = self._parse_js_value(basic_content, "dump_topology_map_info")
         if topology and "nodes" in topology:
             data["topology"] = topology
 
@@ -416,12 +418,16 @@ class VerizonRouterAPI:
         if known_devices:
             data["known_devices"] = known_devices
 
-        # Parse station info
+        # Parse station info (handle potential typo fix: toplogy -> topology)
         station_info = self._parse_js_value(basic_content, "dump_toplogy_station_info")
+        if not station_info:
+            station_info = self._parse_js_value(basic_content, "dump_topology_station_info")
+
         if not station_info and owl_content:
-            station_info = self._parse_js_value(
-                owl_content, "dump_toplogy_station_info"
-            )
+            station_info = self._parse_js_value(owl_content, "dump_toplogy_station_info")
+            if not station_info:
+                station_info = self._parse_js_value(owl_content, "dump_topology_station_info")
+
         if station_info:
             data["station_info"] = station_info
 
