@@ -845,16 +845,24 @@ class VerizonRouterSensor(CoordinatorEntity, SensorEntity):
         """Resolve the router's device registry ID for linking extenders.
 
         HA has deprecated the ``via_device`` DeviceInfo key (an identifiers
-        tuple) in favor of ``via_device_id`` (the resolved registry ID).
-        Returns None if the router device hasn't been registered yet, in
-        which case callers should omit the link rather than fail — HA will
-        re-link on the next refresh once it exists.
+        tuple) in favor of ``via_device_id`` (the resolved registry ID), and
+        separately deprecated looking that id up via
+        ``device_registry.async_get_device(identifiers=...)`` — identifiers
+        are no longer guaranteed unique across config entries. The
+        replacement, ``async_get_device_id_by_identifier``, is scoped to a
+        single config entry and raises ``ValueError`` if the device doesn't
+        exist yet, so we catch that and return None. Callers should omit the
+        link in that case rather than fail — HA will re-link on the next
+        refresh once the router device exists.
         """
-        device_registry = dr.async_get(self.hass)
-        router_device = device_registry.async_get_device(
-            identifiers={(DOMAIN, self._entry.entry_id)}
-        )
-        return router_device.id if router_device else None
+        try:
+            return dr.async_get_device_id_by_identifier(
+                self.hass,
+                (DOMAIN, self._entry.entry_id),
+                config_entry_id=self._entry.entry_id,
+            )
+        except ValueError:
+            return None
 
     def _get_processed_data(self) -> dict[str, dict]:
         """Return processed sensor data, populating the coordinator cache if needed.
