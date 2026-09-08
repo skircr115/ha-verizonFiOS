@@ -143,7 +143,14 @@ logger:
 
 ## Changelog
 
-### v1.2.1 (2026-06-28) - Current Release
+### v1.2.2 (2026-09-08) - Current Release
+- ✅ Fixed deprecated `via_device` usage in extender `DeviceInfo` — extenders now link to the router via the resolved `via_device_id` instead of an identifiers tuple, per Home Assistant's device registry deprecation (removal targeted for HA 2027.8.0). On some recent HA cores this deprecation is enforced as a hard error for the sensor platform specifically, which could prevent extender sensors from being added at all; this release resolves that.
+- ✅ Fixed deprecated `device_registry.async_get_device(identifiers=...)` lookup used to resolve the router's `via_device_id` — replaced with the purpose-built `async_get_device_id_by_identifier()` helper, since device identifiers are no longer guaranteed unique across config entries.
+- 🧹 Removed unused, dead `_get_device_info()` helper in `sensor.py` (never called; used the same deprecated pattern)
+- ⚠️ **Minimum Home Assistant version raised to 2026.9.0** — required for the `async_get_device_id_by_identifier()` helper used above
+- ℹ️ No other breaking changes — all entity IDs, sensor names, and existing configuration entries remain the same
+
+### v1.2.1 (2026-06-28)
 - ✅ Fixed asyncio blocking call when creating SSL context
 - 🚀 Performance optimization: Convert JS parsing to use regex
 - ⚡ Optimize `_sanitize_name` using translation mapping and pre-compiled regex

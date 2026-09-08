@@ -7,6 +7,7 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -52,19 +53,6 @@ async def async_setup_entry(
             )
 
     async_add_entities(sensors)
-
-
-def _get_device_info(
-    device_key: str, device_name: str, model: str, entry: ConfigEntry
-) -> DeviceInfo:
-    """Create device info for a device."""
-    return DeviceInfo(
-        identifiers={(DOMAIN, f"{entry.entry_id}_{device_key}")},
-        name=device_name,
-        manufacturer="Verizon",
-        model=model,
-        via_device=(DOMAIN, entry.entry_id) if device_key != "router" else None,
-    )
 
 
 def _process_router_data(data: dict[str, Any]) -> dict[str, dict]:
@@ -853,6 +841,29 @@ class VerizonRouterSensor(CoordinatorEntity, SensorEntity):
         self._attr_icon = icon
         self._attr_state_class = state_class
 
+    def _get_router_device_id(self) -> str | None:
+        """Resolve the router's device registry ID for linking extenders.
+
+        HA has deprecated the ``via_device`` DeviceInfo key (an identifiers
+        tuple) in favor of ``via_device_id`` (the resolved registry ID), and
+        separately deprecated looking that id up via
+        ``device_registry.async_get_device(identifiers=...)`` — identifiers
+        are no longer guaranteed unique across config entries. The
+        replacement, ``async_get_device_id_by_identifier``, is scoped to a
+        single config entry and raises ``ValueError`` if the device doesn't
+        exist yet, so we catch that and return None. Callers should omit the
+        link in that case rather than fail — HA will re-link on the next
+        refresh once the router device exists.
+        """
+        try:
+            return dr.async_get_device_id_by_identifier(
+                self.hass,
+                (DOMAIN, self._entry.entry_id),
+                config_entry_id=self._entry.entry_id,
+            )
+        except ValueError:
+            return None
+
     def _get_processed_data(self) -> dict[str, dict]:
         """Return processed sensor data, populating the coordinator cache if needed.
 
@@ -900,7 +911,7 @@ class VerizonRouterSensor(CoordinatorEntity, SensorEntity):
                     manufacturer="Verizon",
                     model=node.get("model_name", "CE1000A"),
                     sw_version=node.get("sw_ver"),
-                    via_device=(DOMAIN, self._entry.entry_id),
+                    via_device_id=self._get_router_device_id(),
                 )
 
         # Fallback
@@ -909,7 +920,7 @@ class VerizonRouterSensor(CoordinatorEntity, SensorEntity):
             name=f"Extender {self._device_key.split('_')[1]}",
             manufacturer="Verizon",
             model="CE1000A",
-            via_device=(DOMAIN, self._entry.entry_id),
+            via_device_id=self._get_router_device_id(),
         )
 
     @property
