@@ -355,7 +355,11 @@ class VerizonRouterAPI:
                         raise Exception(  # pylint: disable=broad-exception-raised
                             f"Failed to fetch cgi_basic.js: {response.status}"
                         )
-                    basic_content = await response.text()
+                    # Decode leniently: a single non-UTF-8 byte (e.g. in a client
+                    # device name) must not discard the whole payload.
+                    basic_content = (await response.read()).decode(
+                        "utf-8", errors="replace"
+                    )
 
                 # Get cgi_owl.js (optional — not all routers expose this endpoint)
                 owl_content = None
@@ -366,9 +370,24 @@ class VerizonRouterAPI:
                         timeout=aiohttp.ClientTimeout(total=30),
                     ) as response:
                         if response.status == 200:
-                            owl_content = await response.text()
+                            # Lenient decode: see cgi_basic.js above.
+                            owl_content = (await response.read()).decode(
+                                "utf-8", errors="replace"
+                            )
+                        else:
+                            _LOGGER.debug(
+                                "cgi_owl.js not available (status %s)",
+                                response.status,
+                            )
                 except Exception as e:  # pylint: disable=broad-except
-                    _LOGGER.debug("Could not fetch cgi_owl.js: %s", e)
+                    # Logged at WARNING: on some routers the device list and
+                    # Wi-Fi station data exist only in cgi_owl.js, so losing it
+                    # makes many sensors unavailable.
+                    _LOGGER.warning(
+                        "Could not fetch cgi_owl.js; device-list and Wi-Fi "
+                        "sensors may be unavailable: %s",
+                        e,
+                    )
 
                 return await self._parse_data(basic_content, owl_content)
         finally:
