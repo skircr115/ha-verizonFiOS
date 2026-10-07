@@ -143,7 +143,13 @@ logger:
 
 ## Changelog
 
-### v1.2.2 (2026-09-08) - Current Release
+### v1.2.3 (2026-10-07) - Current Release
+- ✅ Fixed device-list and Wi-Fi sensors (`*_active_devices`, `*_total_known_devices`, per-band device counts, 2g/5g signal, SNR, retries, errors, link rate) going unavailable when `cgi_basic.js` / `cgi_owl.js` contain a byte that isn't valid UTF-8 (typically a client device name) — router responses are now decoded leniently, so one bad byte costs at most one replacement character in a name instead of discarding the whole payload (#21)
+- ✅ A failure to fetch `cgi_owl.js` is now logged at WARNING (a missing endpoint, HTTP non-200, stays at debug since not all routers expose it) — previously it was debug-only while the coordinator still reported a successful update
+- ℹ️ May also explain intermittent missing Wi-Fi data like #17, though that report was never confirmed to be the same cause
+- ℹ️ No breaking changes — all entity IDs, sensor names, and existing configuration entries remain the same
+
+### v1.2.2 (2026-09-08)
 - ✅ Fixed deprecated `via_device` usage in extender `DeviceInfo` — extenders now link to the router via the resolved `via_device_id` instead of an identifiers tuple, per Home Assistant's device registry deprecation (removal targeted for HA 2027.8.0). On some recent HA cores this deprecation is enforced as a hard error for the sensor platform specifically, which could prevent extender sensors from being added at all; this release resolves that.
 - ✅ Fixed deprecated `device_registry.async_get_device(identifiers=...)` lookup used to resolve the router's `via_device_id` — replaced with the purpose-built `async_get_device_id_by_identifier()` helper, since device identifiers are no longer guaranteed unique across config entries.
 - 🧹 Removed unused, dead `_get_device_info()` helper in `sensor.py` (never called; used the same deprecated pattern)
